@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "jawad027/devops-lab-app"
+        KUBECONFIG_PATH = "/home/ubuntu/.minikube/profiles/minikube/config"
     }
 
     stages {
@@ -34,11 +35,12 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 dir('app') { // ensure we are in the folder containing deployment.yaml
-                    withKubeConfig([credentialsId: 'kubeconfig-id']) {
+                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}"]) {
                         sh '''
-                        kubectl apply  -f deployment.yaml
-                        kubectl apply  -f service.yaml
-                        kubectl apply  -f pvc.yaml
+                        kubectl apply -f deployment.yaml
+                        kubectl apply -f service.yaml
+                        kubectl apply -f pvc.yaml
+                        kubectl get pods -o wide
                         '''
                     }
                 }
