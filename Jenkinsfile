@@ -34,13 +34,13 @@ pipeline {
     stage('Kubernetes Deployment') {
       steps {
         echo 'Deploying to Kubernetes'
-        sh 'kubectl --insecure-skip-tls-verify apply -f pvc.yaml'
-        sh 'kubectl --insecure-skip-tls-verify apply -f deployment.yaml'
-        sh 'kubectl --insecure-skip-tls-verify apply -f service.yaml'
+        sh 'kubectl  apply -f pvc.yaml'
+        sh 'kubectl  apply -f deployment.yaml'
+        sh 'kubectl  apply -f service.yaml'
         sh '''
           # Force rollout restart to ensure pods pull latest image
-          kubectl rollout restart deployment/devops-lab-app
-          kubectl rollout status deployment/devops-lab-app --timeout=300s
+          kubectl rollout restart deployment/devops-app
+          kubectl rollout status deployment/devops-app --timeout=300s
         '''
         sh 'kubectl get pods'
         sh 'kubectl get svc'
@@ -76,11 +76,11 @@ pipeline {
         echo 'Setting up port forwarding for CRUD app and Grafana'
         sh '''#!/bin/bash
           # Kill any existing port-forward processes
-          pkill -f "kubectl port-forward.*devops-lab-app" || true
+          pkill -f "kubectl port-forward.*devops-app" || true
           pkill -f "kubectl port-forward.*grafana" || true
          
           # Wait for pods to be ready
-          kubectl wait --for=condition=ready pod -l app=devops-lab-app --timeout=300s || true
+          kubectl wait --for=condition=ready pod -l app=devops-app --timeout=300s || true
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana -n monitoring --timeout=300s || true
          
           # Prevent Jenkins from killing these processes
@@ -88,7 +88,7 @@ pipeline {
           export BUILD_ID=dontKillMe
          
           # Start port forwarding in background with nohup and disown
-          nohup kubectl port-forward svc/devops-lab-app 8000:80 --address=0.0.0.0 > /tmp/crud-app-portforward.log 2>&1 </dev/null &
+          nohup kubectl port-forward svc/devops-app 8000:80 --address=0.0.0.0 > /tmp/crud-app-portforward.log 2>&1 </dev/null &
           disown
          
           nohup kubectl --namespace monitoring port-forward svc/prometheus-grafana 3000:80 --address=0.0.0.0 > /tmp/grafana-portforward.log 2>&1 </dev/null &
