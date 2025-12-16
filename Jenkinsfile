@@ -34,9 +34,9 @@ pipeline {
     stage('Kubernetes Deployment') {
       steps {
         echo 'Deploying to Kubernetes'
-        sh 'kubectl apply -f pvc.yaml'
-        sh 'kubectl apply -f deployment.yaml'
-        sh 'kubectl apply -f service.yaml'
+        sh 'kubectl --insecure-skip-tls-verify apply -f pvc.yaml'
+        sh 'kubectl --insecure-skip-tls-verify apply -f deployment.yaml'
+        sh 'kubectl --insecure-skip-tls-verify apply -f service.yaml'
         sh '''
           # Force rollout restart to ensure pods pull latest image
           kubectl rollout restart deployment/devops-lab-app
