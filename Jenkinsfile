@@ -3,7 +3,7 @@ pipeline {
  
   environment {
     DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
-    DOCKER_IMAGE = "jawad027/devops-lab-app:latest"
+    DOCKER_IMAGE = "jawad027/devops-lab-app"
   }
  
   stages {
