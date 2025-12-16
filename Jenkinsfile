@@ -1,13 +1,10 @@
 pipeline {
   agent any
   environment {
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
-    } 
-  environment {
+    KUBECONFIG = '/var/lib/jenkins/.kube/config'
     DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
     DOCKER_IMAGE = "jawad027/devops-lab-app"
   }
- 
   stages {
     stage('Code Fetch') {
       steps {
@@ -15,7 +12,6 @@ pipeline {
         checkout scm
       }
     }
-   
     stage('Docker Image Creation') {
       steps {
         echo 'Building Docker Image'
@@ -23,7 +19,6 @@ pipeline {
         sh 'docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .'
       }
     }
-   
     stage('Docker Push to DockerHub') {
       steps {
         echo 'Pushing Docker Image to DockerHub'
@@ -32,13 +27,12 @@ pipeline {
         sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
       }
     }
-   
     stage('Kubernetes Deployment') {
       steps {
         echo 'Deploying to Kubernetes'
-        sh 'kubectl  apply -f pvc.yaml'
-        sh 'kubectl  apply -f deployment.yaml'
-        sh 'kubectl  apply -f service.yaml'
+        sh 'kubectl apply -f pvc.yaml'
+        sh 'kubectl apply -f deployment.yaml'
+        sh 'kubectl apply -f service.yaml'
         sh '''
           # Force rollout restart to ensure pods pull latest image
           kubectl rollout restart deployment/devops-app
@@ -46,10 +40,8 @@ pipeline {
         '''
         sh 'kubectl get pods'
         sh 'kubectl get svc'
-      
       }
     }
-   
     stage('Prometheus/Grafana Deployment') {
       steps {
         echo 'Deploying Prometheus and Grafana using Helm'
@@ -58,21 +50,18 @@ pipeline {
           if ! command -v helm &> /dev/null; then
             curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
           fi
-         
-          # Create monitoring namespace
+          # Create monitoring namespace (with --create-namespace for safety)
           kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-         
           # Install or upgrade kube-prometheus-stack
           helm upgrade --install prometheus kube-prometheus-stack \
             --repo https://prometheus-community.github.io/helm-charts \
-            --namespace monitoring
-         
+            --namespace monitoring \
+            --create-namespace
           kubectl get deployments -n monitoring
           kubectl get svc -n monitoring
         '''
       }
     }
-   
     stage('Setup Port Forwarding') {
       steps {
         echo 'Setting up port forwarding for CRUD app and Grafana'
@@ -80,27 +69,20 @@ pipeline {
           # Kill any existing port-forward processes
           pkill -f "kubectl port-forward.*devops-app" || true
           pkill -f "kubectl port-forward.*grafana" || true
-         
           # Wait for pods to be ready
           kubectl wait --for=condition=ready pod -l app=devops-app --timeout=300s || true
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana -n monitoring --timeout=300s || true
-         
-          # Prevent Jenkins from killing these processes
+          # Prevent Jenkins from killing these processes (common workaround)
           export JENKINS_NODE_COOKIE=dontKillMe
           export BUILD_ID=dontKillMe
-         
-          # Start port forwarding in background with nohup and disown
-          nohup kubectl port-forward svc/devops-app 8000:80 --address=0.0.0.0 > /tmp/crud-app-portforward.log 2>&1 </dev/null &
+          # Start port forwarding in background
+          nohup kubectl port-forward svc/devops-app 8000:80 --address=0.0.0.0 > /tmp/crud-app-portforward.log 2>&1 &
           disown
-         
-          nohup kubectl --namespace monitoring port-forward svc/prometheus-grafana 3000:80 --address=0.0.0.0 > /tmp/grafana-portforward.log 2>&1 </dev/null &
+          nohup kubectl --namespace monitoring port-forward svc/prometheus-grafana 3000:80 --address=0.0.0.0 > /tmp/grafana-portforward.log 2>&1 &
           disown
-         
           sleep 5
-         
           # Verify processes are running
           ps aux | grep "port-forward" | grep -v grep || echo "Warning: Port forwarding processes may not be running"
-         
           echo "Port forwarding started:"
           echo "- App: http://13.60.187.42:8000"
           echo "- Grafana: http://13.60.187.42:3000"
@@ -112,7 +94,6 @@ pipeline {
       }
     }
   }
- 
   post {
     always {
       sh 'docker logout || true'
