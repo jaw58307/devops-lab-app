@@ -14,9 +14,9 @@ spec:
     spec:
       containers:
       - name: devops-app
-        image: jawad027/devops-app:latest
+        image: jawad027/devops-lab-app:latest
         ports:
-        - containerPort: 5000
+        - containerPort: 80
         volumeMounts:
         - mountPath: /data
           name: app-storage
