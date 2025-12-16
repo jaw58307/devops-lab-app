@@ -1,6 +1,8 @@
 pipeline {
   agent any
- 
+  environment {
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+    } 
   environment {
     DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
     DOCKER_IMAGE = "jawad027/devops-lab-app"
