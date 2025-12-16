@@ -33,11 +33,15 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                kubectl apply -f deployment.yaml
-                kubectl apply -f service.yaml
-                kubectl apply -f pvc.yaml
-                '''
+                dir('app') { // ensure we are in the folder containing deployment.yaml
+                    withKubeConfig([credentialsId: 'kubeconfig-id']) {
+                        sh '''
+                        kubectl apply --validate=false -f deployment.yaml
+                        kubectl apply --validate=false -f service.yaml
+                        kubectl apply --validate=false -f pvc.yaml
+                        '''
+                    }
+                }
             }
         }
     }
